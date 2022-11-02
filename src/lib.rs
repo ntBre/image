@@ -68,22 +68,28 @@ impl Image {
     }
 
     /// decode a PNG image from the file denoted by `path`
-    pub fn load<P: AsRef<Path>>(path: P) -> Self {
-        let decoder =
-            png::Decoder::new(File::open(path).expect("failed to open infile"));
-        let mut reader = decoder.read_info().unwrap();
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+        let decoder = png::Decoder::new(File::open(path)?);
+        let mut reader = decoder.read_info()?;
 
         let mut buf = vec![0; reader.output_buffer_size()];
-        let frame = reader.next_frame(&mut buf).unwrap();
+        let frame = reader.next_frame(&mut buf)?;
         // Grab the bytes of the image.
         let bytes = &buf[..frame.buffer_size()];
 
+        assert!(frame.color_type == ColorType::Rgb);
+        let mut data = Vec::with_capacity(bytes.len() * 4 / 3);
+        for chunk in bytes.chunks_exact(3) {
+            data.extend(chunk);
+            data.push(255);
+        }
+
         let info = reader.info();
-        Self {
+        Ok(Self {
             width: info.width,
             height: info.height,
-            data: bytes.to_vec(),
-        }
+            data,
+        })
     }
 
     /// fill `self` with `color`
