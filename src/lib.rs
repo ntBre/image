@@ -2,10 +2,14 @@
 
 use std::{
     error::Error,
+    fmt::Debug,
     fs::File,
     io::{BufWriter, Write},
+    ops::Range,
     path::Path,
 };
+
+use png::ColorType;
 
 /// newtype wrapping `png::Encoder` and simplifying the API with more default
 /// settings
@@ -23,7 +27,18 @@ impl<'a, W: Write> Encoder<'a, W> {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct Rgba(u8, u8, u8, u8);
+
+impl Debug for Rgba {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "#{:02x}{:02x}{:02x}{:02x}",
+            self.0, self.1, self.2, self.3
+        )
+    }
+}
 
 impl Rgba {
     pub const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
@@ -48,6 +63,13 @@ impl Rgba {
 
     pub const fn as_array(&self) -> [u8; 4] {
         [self.0, self.1, self.2, self.3]
+    }
+}
+
+impl From<&[u8]> for Rgba {
+    fn from(value: &[u8]) -> Self {
+        assert!(value.len() == 4);
+        Self(value[0], value[1], value[2], value[3])
     }
 }
 
@@ -99,12 +121,21 @@ impl Image {
         }
     }
 
-    /// set the pixel at row `x` and col `y` to `color`
-    pub fn set(&mut self, x: usize, y: usize, color: Rgba) {
-        let v = color.as_array();
+    fn index(&self, x: usize, y: usize) -> Range<usize> {
         let row = 4 * x * self.width as usize;
         let col = 4 * y;
-        self.data[row + col..row + col + 4].copy_from_slice(&v);
+        row + col..row + col + 4
+    }
+
+    pub fn at(&self, x: usize, y: usize) -> Rgba {
+        let v = &self.data[self.index(x, y)];
+        Rgba::from(v)
+    }
+
+    /// set the pixel at row `x` and col `y` to `color`
+    pub fn set(&mut self, x: usize, y: usize, color: Rgba) {
+        let idx = self.index(x, y);
+        self.data[idx].copy_from_slice(&color.as_array());
     }
 
     /// write self to the PNG file specified by `path`
