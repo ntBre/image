@@ -1,4 +1,4 @@
-use super::{rgba::Rgba, Encoder};
+use super::{Encoder, Rgba};
 use png::ColorType;
 use std::{error::Error, fs::File, io::BufWriter, ops::Range, path::Path};
 
