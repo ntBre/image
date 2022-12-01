@@ -34,6 +34,10 @@ impl Rgba {
         Self::new(0, 0, 0, 255)
     }
 
+    pub const fn white() -> Self {
+        Self::new(255, 255, 255, 255)
+    }
+
     pub const fn as_array(&self) -> [u8; 4] {
         [self.0, self.1, self.2, self.3]
     }

@@ -2,19 +2,82 @@ use super::{Encoder, Rgba};
 use png::ColorType;
 use std::{error::Error, fs::File, io::BufWriter, ops::Range, path::Path};
 
+pub mod draw {
+    use crate::{Image, Rgba};
+
+    pub trait Draw {
+        /// draw `self` onto `img` at (`x`, `y`) in `color`
+        fn draw(&self, img: &mut Image, x: usize, y: usize, color: Rgba);
+    }
+
+    pub struct Circle {
+        radius: usize,
+    }
+
+    impl Circle {
+        pub fn new(radius: usize) -> Self {
+            Self { radius }
+        }
+    }
+
+    impl Draw for Circle {
+        fn draw(&self, img: &mut Image, x: usize, y: usize, color: Rgba) {
+            let r = self.radius;
+            let (w, h) = img.shape();
+            // bounds-checks
+            let lx = if x < r { 0 } else { x - r };
+            let ly = if y < r { 0 } else { y - r };
+            let hx = if x + r >= w - 1 { w - 1 } else { x + r };
+            let hy = if y + r >= h - 1 { h - 1 } else { y + r };
+            let mx = (lx + hx) / 2;
+            let my = (ly + hy) / 2;
+            for i in lx..=hx {
+                for j in ly..=hy {
+                    let ix = if i > mx { i - mx } else { mx - i };
+                    let iy = if j > my { j - my } else { my - j };
+                    if ix * ix + iy * iy <= r * r {
+                        img.set(j, i, color);
+                    }
+                }
+            }
+        }
+    }
+
+    pub struct Square {
+        length: usize,
+    }
+
+    impl Draw for Square {
+        fn draw(&self, img: &mut Image, x: usize, y: usize, color: Rgba) {
+            let r = self.length;
+            let (w, h) = img.shape();
+            // bounds-checks
+            let lx = if x < r { 0 } else { x - r };
+            let ly = if y < r { 0 } else { y - r };
+            let hx = if x + r >= w - 1 { w - 1 } else { x + r };
+            let hy = if y + r >= h - 1 { h - 1 } else { y + r };
+            for i in lx..=hx {
+                for j in ly..=hy {
+                    img.set(i, j, color);
+                }
+            }
+        }
+    }
+}
+
 pub struct Image {
-    pub(crate) width: u32,
+    pub(crate) width: usize,
     #[allow(unused)]
-    pub(crate) height: u32,
+    pub(crate) height: usize,
     pub(crate) data: Vec<u8>,
 }
 
 impl Image {
-    pub fn new(width: u32, height: u32) -> Self {
+    pub fn new(width: usize, height: usize) -> Self {
         Self {
             width,
             height,
-            data: vec![0; (4 * height * width) as usize],
+            data: vec![0; 4 * height * width],
         }
     }
 
@@ -37,10 +100,15 @@ impl Image {
 
         let info = reader.info();
         Ok(Self {
-            width: info.width,
-            height: info.height,
+            width: info.width as usize,
+            height: info.height as usize,
             data,
         })
+    }
+
+    /// return the width and height of the image
+    pub fn shape(&self) -> (usize, usize) {
+        (self.width, self.height)
     }
 
     /// fill `self` with `color`
@@ -51,7 +119,7 @@ impl Image {
     }
 
     pub(crate) fn index(&self, x: usize, y: usize) -> Range<usize> {
-        let row = 4 * x * self.width as usize;
+        let row = 4 * x * self.width;
         let col = 4 * y;
         row + col..row + col + 4
     }

@@ -13,8 +13,8 @@ pub mod rgba;
 pub struct Encoder<'a, W: Write>(png::Encoder<'a, W>);
 
 impl<'a, W: Write> Encoder<'a, W> {
-    pub fn new(w: W, width: u32, height: u32) -> Self {
-        let mut e = png::Encoder::new(w, width, height);
+    pub fn new(w: W, width: usize, height: usize) -> Self {
+        let mut e = png::Encoder::new(w, width as u32, height as u32);
         e.set_color(png::ColorType::Rgba);
         Self(e)
     }
