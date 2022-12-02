@@ -6,8 +6,51 @@ pub mod draw {
     use crate::{Image, Rgba};
 
     pub trait Draw {
+        type Endpoint;
+
         /// draw `self` onto `img` at (`x`, `y`) in `color`
-        fn draw(&self, img: &mut Image, x: usize, y: usize, color: Rgba);
+        fn draw(
+            &self,
+            img: &mut Image,
+            x: Self::Endpoint,
+            y: Self::Endpoint,
+            color: Rgba,
+        );
+    }
+
+    pub struct Line {
+        width: usize,
+    }
+
+    impl Line {
+        pub fn new(width: usize) -> Self {
+            Self { width }
+        }
+    }
+
+    impl Draw for Line {
+        type Endpoint = (usize, usize);
+
+        fn draw(
+            &self,
+            img: &mut Image,
+            x: Self::Endpoint,
+            y: Self::Endpoint,
+            color: Rgba,
+        ) {
+            let (fx, fy) = x;
+            let (tx, ty) = y;
+            // TODO bounds checks. also these should all be f64 so -ve is okay
+            let m = (ty as f64 - fy as f64) / (tx as f64 - fx as f64);
+            let b = ty as f64 - m * tx as f64;
+            let f = |x| (m * x as f64 + b).round() as usize;
+            let hw = self.width / 2;
+            for i in fx..tx {
+                for w in i - hw..i + hw {
+                    img.set(f(i), w, color);
+                }
+            }
+        }
     }
 
     pub struct Circle {
@@ -21,6 +64,8 @@ pub mod draw {
     }
 
     impl Draw for Circle {
+        type Endpoint = usize;
+
         fn draw(&self, img: &mut Image, x: usize, y: usize, color: Rgba) {
             let r = self.radius;
             let (w, h) = img.shape();
@@ -48,6 +93,8 @@ pub mod draw {
     }
 
     impl Draw for Square {
+        type Endpoint = usize;
+
         fn draw(&self, img: &mut Image, x: usize, y: usize, color: Rgba) {
             let r = self.length;
             let (w, h) = img.shape();
