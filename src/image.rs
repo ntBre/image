@@ -40,14 +40,25 @@ pub mod draw {
         ) {
             let (fx, fy) = x;
             let (tx, ty) = y;
-            // TODO bounds checks. also these should all be f64 so -ve is okay
-            let m = (ty as f64 - fy as f64) / (tx as f64 - fx as f64);
+            let num = ty as f64 - fy as f64;
+            let den = tx as f64 - fx as f64;
+            let m = num / den;
             let b = ty as f64 - m * tx as f64;
-            let f = |x| (m * x as f64 + b).round() as usize;
+            let f_x = |x| (m * x as f64 + b).round() as usize;
+            let f_y = |y| ((y as f64 - b) / m).round() as usize;
             let hw = self.width / 2;
-            for i in fx..tx {
-                for w in i - hw..i + hw {
-                    img.set(f(i), w, color);
+            // loop over the larger of fx->tx and fy->ty
+            if den.abs() > num.abs() {
+                for i in fx..tx {
+                    for w in i - hw..=i + hw {
+                        img.set(f_x(i), w, color);
+                    }
+                }
+            } else {
+                for i in fy..ty {
+                    for w in i - hw..=i + hw {
+                        img.set(w, f_y(i), color);
+                    }
                 }
             }
         }
